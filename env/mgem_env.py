@@ -72,7 +72,8 @@ class Environment:
         return WT_power + PV_power
 
     def load(self):
-        return self.load_profile[self.time_posi-2, self.time_posi+1]
+        return self.load_profile[self.time_posi]
+        #self.load_profile[self.time_posi-2:self.time_posi+1]
 
     def terminated(self):
         return self.time_posi == len(self.load_profile)

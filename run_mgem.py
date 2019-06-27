@@ -1,3 +1,39 @@
+"""
+This part of scripts contains code for optimising the problem of
+energy management in the setting of deterministic energy system, which
+is composed of PV, Diesel generator, battery and load, in a micro-grid
+which is not connected with any other grid.
+
+This system is called as deterministic because we only deal with a time
+series of length equal to 144. The goal of optimisation is to select
+the best action series through the time to consume minimum amount of diesel.
+All fluctuations in solar radiation and in energy demand with be encoded
+inside the natural time series order instead of as independent variables
+in the state vector representation.
+
+In the light of the statement above, we have several solutions/tools in
+our disposition.
+    1. Rule-based control
+    2. Dynamic programming
+    3. Reinforcement learning(lqa, Q-learning, DQN, REINFORCE, DPG, DDPG, Actor-Critic)
+
+A brief formulation of our problem is given as follows:
+    --> Given C_k, P_k, SOC_(k-1)
+    --> Find u_k(action of the battery)
+    --> So that {u_k} yields minimum consumption of diesel
+
+BTW, as for the stochastic setting, out formulation is completely different:
+    --> Given [C_(k-hc), ..., C_(k-1), P_(k-hp), ..., P_(k-1), SOC_(k-1)]
+    --> Find u_k
+    --> So that {u_k} yields minimum consumption of diesel
+
+Not every method mentioned above can be applied to both settings.
+Due to curse of dimension, namely the exponentially increasing
+computation cost from more discrete or discretion-of state space,
+observation space and the action space, applying certain methods, like
+tabular ones, to the second setting may not be realistic. Thus it
+requires discretion to choose the proper method.
+"""
 import numpy as np
 import math
 from rlmgem.env.mgem_env import ElectricityGenerator, Environment

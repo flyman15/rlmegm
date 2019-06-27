@@ -5,6 +5,7 @@ Maybe the optimal policy already
 
 import numpy as np
 import copy
+import math
 import matplotlib.pyplot as plt
 
 from rlmgem.env.CleanPowerGenerator import ElectricityGenerator
@@ -39,6 +40,7 @@ def PV_prod(env_profile, time_posi):
 
 load = np.load('C:/Users\lenovo\Documents\PycharmProjets\Easy21/rlmgem/data/load.npy')
 pv_prod_profile = np.load('C:/Users\lenovo\Documents\PycharmProjets\Easy21/rlmgem/data/PV_prod.npy')
+# load = [10*abs(math.sin(4*math.pi*x/144)) for x in range(0,144)]
 time_span = len(load)
 
 # --------------------Test------------------------
