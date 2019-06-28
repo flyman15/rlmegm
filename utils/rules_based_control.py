@@ -21,14 +21,15 @@ def battery_dynamics(soc, efficiency_function, output_power, time_step = 1/6):
     n_bat = 5
     energy_bat_max = 4.920*n_bat
     sigma_bat = 0
-    # min_soc = 0.2
-    # max_soc = 1
     new_soc = soc*(1-sigma_bat) + output_power*time_step*efficiency_function(output_power)/energy_bat_max
     return new_soc, [new_soc]
 
-def fuelcell_consumption(power_output, time_step):
-    nominal_power = 30
-    return time_step*(0.04667 * nominal_power + 0.26267 * power_output)
+def fuelcell_consumption(power_output, time_step=1/6):
+    if power_output > 0:
+        nominal_power = 30
+        return time_step*(0.04667 * nominal_power + 0.26267 * power_output)
+    else:
+        return 0
 
 def PV_prod(env_profile, time_posi):
     area_pv = 1.94
@@ -43,12 +44,6 @@ pv_prod_profile = np.load('C:/Users\lenovo\Documents\PycharmProjets\Easy21/rlmge
 # load = [10*abs(math.sin(4*math.pi*x/144)) for x in range(0,144)]
 time_span = len(load)
 
-# --------------------Test------------------------
-# time_span = 20
-# load = 20*np.ones(time_span)
-# pv_prod_profile = 0.3*np.ones(time_span)
-# pv_prod_profile[7:15] = 1
-# -----------------------------------------------------------------------
 
 TIME_STEP = 1/6
 myBattery = Battery(efficiency_function=battery_efficiency, dynamics_function=battery_dynamics,
@@ -120,7 +115,7 @@ while myEnv.time_posi < len(load):
                     fuel_consume[k] = myEnv.fuelcell.consumption(fuel_output_power[k], TIME_STEP)
                 else:
                     fuel_output_power[k] = myEnv.fuelcell.max_power
-                    fuel_consume[k] = myEnv.fuelcell.consumption(fuel_output_power[k])
+                    fuel_consume[k] = myEnv.fuelcell.consumption(fuel_output_power[k],TIME_STEP)
                     P_gene[k] = fuel_output_power[k] + P_pv[k] - battery_output_power[k]
         else:
             myEnv.step_transition(0)
@@ -136,20 +131,37 @@ while myEnv.time_posi < len(load):
 
 np.save('rules_diesel.npy', fuel_output_power)
 
+print(sum(fuel_consume))
+cost = []
+for e in fuel_output_power:
+    cost.append(myEnv.fuelcell.consumption(e,TIME_STEP))
+print(sum(cost))
+print(fuel_output_power)
+
+
+plt.figure()
+plt.plot(fuel_consume, label = '1')
+plt.plot(cost, label = 'cost')
+plt.legend()
+plt.show()
+
 plt.figure()
 plt.plot(load, label = 'load')
 plt.plot(P_pv, label = 'PV')
 plt.plot(fuel_output_power, label = 'Diesel')
 plt.plot(-1*(battery_output_power), label = 'Battery')
+plt.title('rule based control')
 plt.legend()
+plt.savefig('../figures/rule_based_control.png', bbox_inches='tight')
 plt.show()
+
 plt.figure()
 plt.plot(P_pv)
 plt.show()
-print(sum(fuel_consume))
 plt.figure()
 plt.plot(battery_output_power)
 plt.show()
+
 plt.figure()
 plt.plot(soc_process)
 plt.show()

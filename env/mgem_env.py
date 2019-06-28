@@ -9,6 +9,10 @@ from rlmgem.env.FuelCell import FuelCell
 
 
 class Environment:
+    """
+    This environment class meets the needs for deterministic setting;
+    Thus in this case, the state variable is [SOC_k, k]
+    """
     def __init__(self, load_profile, battery: Battery, fuelcell: FuelCell,
                         WT: ElectricityGenerator = None, PV: ElectricityGenerator=None, time_step = 1/6):
         self.WT = copy.copy(WT)
@@ -20,14 +24,17 @@ class Environment:
         self.time_step = time_step
 
     def initEnv(self):
-        return # initial state(general sense, not only the control variable state)
+        """Reset the battery soc and the time series position"""
+        self.battery.initBat()
+        self.time_posi = 0
+        return self.state()
 
     def step_transition(self, action):
+        """Only used in the rule-based control"""
+
         """ Balanced power flow """
-        clean_power = self.clean_power_generation()
-        load =self.load()
         battery_output_power = self.battery.max_power*action
-        fuelcell_output_power = clean_power + battery_output_power - load
+        fuelcell_output_power = self.clean_power_generation() + battery_output_power - self.load()
 
         """Control and dynamic action for the battery and the fuel cell"""
         self.battery.dynamics(self.time_step, battery_output_power)
@@ -38,10 +45,8 @@ class Environment:
 
     def step(self, action):
         """ Balanced power flow """
-        clean_power = self.clean_power_generation()
-        load = self.load()
         battery_output_power = self.battery.max_power * action
-        fuelcell_output_power = clean_power + battery_output_power - load
+        fuelcell_output_power = self.clean_power_generation() + battery_output_power - self.load()
 
         """Control and dynamic action for the battery and the fuel cell"""
         self.battery.dynamics(self.time_step, battery_output_power)
@@ -50,6 +55,8 @@ class Environment:
         self.time_posi += 1
         return self.load(), self.clean_power_generation(), self.battery.soc, fuel_consumption, self.terminated()
 
+    def state(self):
+        return self.battery.soc, self.time_posi
 
     def action_space(self):
         """
@@ -73,7 +80,6 @@ class Environment:
 
     def load(self):
         return self.load_profile[self.time_posi]
-        #self.load_profile[self.time_posi-2:self.time_posi+1]
 
     def terminated(self):
         return self.time_posi == len(self.load_profile)

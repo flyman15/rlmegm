@@ -15,24 +15,25 @@ In the light of the statement above, we have several solutions/tools in
 our disposition.
     1. Rule-based control
     2. Dynamic programming
-    3. Reinforcement learning(lqa, Q-learning, DQN, REINFORCE, DPG, DDPG, Actor-Critic)
+    3. Reinforcement learning(lqa, Q-learning, DQN, REINFORCE, DPG, DDPG, Actor-Critic...)
 
 A brief formulation of our problem is given as follows:
     --> Given C_k, P_k, SOC_(k-1)
     --> Find u_k(action of the battery)
     --> So that {u_k} yields minimum consumption of diesel
 
-BTW, as for the stochastic setting, out formulation is completely different:
+BTW, as for the stochastic setting, out formulation is different:
     --> Given [C_(k-hc), ..., C_(k-1), P_(k-hp), ..., P_(k-1), SOC_(k-1)]
     --> Find u_k
     --> So that {u_k} yields minimum consumption of diesel
 
 Not every method mentioned above can be applied to both settings.
 Due to curse of dimension, namely the exponentially increasing
-computation cost from more discrete or discretion-of state space,
+computation cost from more discrete or discretization-of state space,
 observation space and the action space, applying certain methods, like
 tabular ones, to the second setting may not be realistic. Thus it
-requires discretion to choose the proper method.
+requires discretion to choose the proper method according to characteristics
+of the problem.
 """
 import numpy as np
 import math

@@ -1,6 +1,20 @@
 """
 Benchmark result
 using Dynamic Programming to obtain the optimal path/policy
+    ---> {DP: 37.459044137013; Rule-based control: 40.334314926278424 }
+
+Problems solved:
+    1. Correct two errors in the algorithm given
+    2. consider the problem of the serious high-frequent oscillation;
+        propose two methods to solve it; the first one being first construct
+        the information matrix then take decision during the reconstruction
+        process in considering penalizing the sharp change between the battery
+        actions for the last step(optimality not guaranteed); the second one
+        being taking into consideration of the rate of change for battery
+        action during the process of constructing the information matrix.
+    3. fix the bug of fuel consumption function about whether when fuel output power
+        is equal to 0, the fuel consumption is 0 or considered as being running
+        below the nominal power
 """
 
 import numpy as np
@@ -24,8 +38,11 @@ def battery_dynamics(soc, efficiency_function, output_power, time_step = 1/6):
     return new_soc, [new_soc]
 
 def fuelcell_consumption(power_output, time_step):
-    nominal_power = 30
-    return time_step*(0.04667 * nominal_power + 0.26267 * power_output)#0.04667 0.26267
+    if power_output > 0:
+        nominal_power = 30
+        return time_step*(0.04667 * nominal_power + 0.26267 * power_output)#0.04667 0.26267
+    else:
+        return 0
 
 def PV_prod(env_profile, time_posi):
     area_pv = 1.94
@@ -40,15 +57,10 @@ load = np.load('C:/Users\lenovo\Documents\PycharmProjets\Easy21/rlmgem/data/load
 pv_prod_profile = np.load('C:/Users\lenovo\Documents\PycharmProjets\Easy21/rlmgem/data/PV_prod.npy')
 # load = [10*abs(math.sin(4*math.pi*x/144)) for x in range(0,144)]
 time_span = len(load)
-# -----------------------------------------------------------------------
-# time_span = 20
-# load = 20*np.ones(time_span)
-# pv_prod_profile = 0.3*np.ones(time_span)
-# pv_prod_profile[7:15] = 1
-# -----------------------------------------------------------------------
+
 
 step_state = 0.001
-action_space = np.arange(-0.05,0.05,0.001) # limit rate of change of SOC each step
+action_space = np.arange(-0.05,0.05,0.005) # limit rate of change of SOC each step
 state_space = np.arange(0.2,1.001,step_state)
 
 leng_action_space = len(action_space)
@@ -125,19 +137,19 @@ info_mx = dict()
 
 def backward(n1, n2list):
     # n1 is the action at k, n2 is the action at (k+1)
-    mylist = n2list[0:2]
-    penalization = 0
-    for n2 in mylist:
-        if abs(action_space[int(n1)]-action_space[int(n2)])<= 0.04:
-            penalization += 0
-        else:
-            penalization += MYINF
+    # mylist = n2list[0:2]
     # penalization = 0
-    # n2 = n2list[0]
-    # if abs(action_space[int(n1)] - action_space[int(n2)]) <= 0.05:
-    #     penalization += 0
-    # else:
-    #     penalization += MYINF
+    # for n2 in mylist:
+    #     if abs(action_space[int(n1)]-action_space[int(n2)])<= 0.05:
+    #         penalization += 0
+    #     else:
+    #         penalization += MYINF
+    penalization = 0
+    n2 = n2list[0]
+    if abs(action_space[int(n1)] - action_space[int(n2)]) <= 0.05:
+        penalization += 0
+    else:
+        penalization += MYINF
     return penalization
 
 for i in range(0, time_span):
@@ -252,6 +264,7 @@ foo1, foo2, P_diesel[i] = state_transition(i, x[i], u[i])
 # -----------------------------------------------------------------------
 # |                      Calculate the cost                             |
 # -----------------------------------------------------------------------
+
 np.save('DP_diesel.npy', P_diesel)
 rules_based_control_diesel = np.load('C:/Users\lenovo\Documents\PycharmProjets\Easy21/rlmgem/utils/rules_diesel.npy')
 cost_rules = 0
@@ -274,15 +287,20 @@ plt.plot(load, label = 'load')
 plt.plot([PV_prod(pv_prod_profile, e) for e in range(0, time_span)], label = 'PV')
 plt.plot(P_diesel, label = 'Diesel')
 plt.plot(-1*power_bat, label = 'Battery')
+plt.title('DP control')
 plt.legend()
+plt.savefig('../figures/DP.png', bbox_inches='tight')
 plt.show()
 
+
 plt.figure()
-plt.plot(rules_based_control_diesel, label = 'rules-based control')
-plt.plot(P_diesel, label = 'DP')
+plt.plot(rules_based_control_diesel, label = 'rules-based control: ' + str(cost_rules) )
+plt.plot(P_diesel, label = 'DP: ' + str(mycost))
 plt.title('contrast between DP and rules-based control')
 plt.legend()
+plt.savefig('../figures/contrast_DP_Rule.png', bbox_inches='tight')
 plt.show()
+
 
 plt.figure()
 plt.plot(x)
