@@ -1,5 +1,9 @@
 """
-Using Deep-Q-learning to optimize the energy management problem in micro-grids
+Using Deep-Q-learning to optimize the energy management problem
+in micro-grids, we work at a deterministic setting. Thus our input
+state variable is just composed by SOC_k and k itself. Our output here
+will be discrete namely almost 11 output possibilities ranging in
+[-0.05, -0.04, ..., 0.05]
 """
 import itertools
 import random
@@ -16,8 +20,8 @@ from torch.autograd import Variable
 from rlmgem.utils.plotting import DQNPlot
 
 
-INPUT_SIZE = 3+3+1
-OUTPUT_SIZE = 1
+INPUT_SIZE = 2
+OUTPUT_SIZE = 11
 
 
 # -------------------------------------------------------
@@ -32,7 +36,7 @@ class MyQNetwork(nn.Module):
 
     def forward(self, s):
         """
-        :param s: must be a Variable of shape (samples, INPUT_SIZE)
+        :param s: must be a torch Variable of shape (samples, INPUT_SIZE)
         :return: tensor of values
         """
         x = F.relu(self.fc1(s))

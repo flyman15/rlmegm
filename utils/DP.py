@@ -1,7 +1,7 @@
 """
 Benchmark result
 using Dynamic Programming to obtain the optimal path/policy
-    ---> {DP: 37.459044137013; Rule-based control: 40.334314926278424 }
+    ---> ?{DP: 37.459044137013; Rule-based control: 40.334314926278424 }
 
 Problems solved:
     1. Correct two errors in the algorithm given
@@ -15,6 +15,7 @@ Problems solved:
     3. fix the bug of fuel consumption function about whether when fuel output power
         is equal to 0, the fuel consumption is 0 or considered as being running
         below the nominal power
+    4. battery efficiency problem... it sucks...
 """
 
 import numpy as np
@@ -28,7 +29,10 @@ plt.style.use('bmh')
 # |                          System Settings                            |
 # -----------------------------------------------------------------------
 def battery_efficiency(output_power):
-    return 0.9
+    if output_power >= 0:
+        return 1.0/0.9
+    else:
+        return 0.9
 
 def battery_dynamics(soc, efficiency_function, output_power, time_step = 1/6):
     n_bat = 5
@@ -38,6 +42,8 @@ def battery_dynamics(soc, efficiency_function, output_power, time_step = 1/6):
     return new_soc, [new_soc]
 
 def fuelcell_consumption(power_output, time_step):
+    # nominal_power = 30
+    # return time_step*(0.04667 * nominal_power + 0.26267 * power_output)#0.04667 0.26267
     if power_output > 0:
         nominal_power = 30
         return time_step*(0.04667 * nominal_power + 0.26267 * power_output)#0.04667 0.26267
@@ -110,7 +116,7 @@ def state_transition(k, x0, u):
     # calculate the minimum charging power
     P_ch_min = -0.279*6*n_bat*x0
     # calculate the charging power of the action taken
-    P_u = u*x0*energy_bat_max/(TIME_STEP*bat_efficiency)
+    P_u = u*x0*energy_bat_max*battery_efficiency(u)/TIME_STEP
     P_load_k = load[k]
     P_pv_k = PV_prod(pv_prod_profile, k)
     Delta_P = P_pv_k - P_load_k
@@ -123,7 +129,7 @@ def state_transition(k, x0, u):
         x = x0 + x0*u
         if Delta_P - P_u >= 0:
             P_diesel = 0
-            cost = 0
+            cost = fuelcell_consumption(0, TIME_STEP)
         else:
             P_diesel = Delta_P - P_u
             cost = fuelcell_consumption(-1*P_diesel, TIME_STEP)
@@ -136,14 +142,6 @@ def state_transition(k, x0, u):
 info_mx = dict()
 
 def backward(n1, n2list):
-    # n1 is the action at k, n2 is the action at (k+1)
-    # mylist = n2list[0:2]
-    # penalization = 0
-    # for n2 in mylist:
-    #     if abs(action_space[int(n1)]-action_space[int(n2)])<= 0.05:
-    #         penalization += 0
-    #     else:
-    #         penalization += MYINF
     penalization = 0
     n2 = n2list[0]
     if abs(action_space[int(n1)] - action_space[int(n2)]) <= 0.05:
@@ -166,9 +164,9 @@ for i in range(0, time_span):
             L_k[m, n], X_k_plus_1[m, n], _= state_transition(k, state_space[m], action_space[n]) # FUNCTION WHICH GIVES THE STATE TRANSITION DYNAMICS
             a, b, c = membership(X_k_plus_1[m,n])
             if b is None:
-                Y_k[m, n] = Y[a, k + 1] + L_k[m,n] + backward(n, mu[a,k+1:])
+                Y_k[m, n] = Y[a, k + 1] + L_k[m,n] #+ backward(n, mu[a,k+1:])
             else:
-                Y_k[m, n] = (1-c)*Y[a, k + 1] + c*Y[b, k+1] + L_k[m, n] + (1-c)*backward(n,mu[a,k+1:]) + c*backward(n,mu[b,k+1:])
+                Y_k[m, n] = (1-c)*Y[a, k + 1] + c*Y[b, k+1] + L_k[m, n] #+ (1-c)*backward(n,mu[a,k+1:]) + c*backward(n,mu[b,k+1:])
 
         Y[m,k] = min(Y_k[m,:])
         mu[m,k] = int(np.argmin(Y_k[m,:]))
@@ -178,14 +176,13 @@ for i in range(0, time_span):
 # -----------------------------------------------------------------------
 # |                  Reconstruct the optimal path                       |
 # -----------------------------------------------------------------------
-'''Method 1: without considering overall structure of the solution'''
 n_bat = 5
 energy_bat_max = 4.920*n_bat
 bat_efficiency = 0.9
 
 a, b,c = membership(x0)
 u0 = action_space[int(mu[a,0])]
-power_bat0 =u0*x0*energy_bat_max/(TIME_STEP*bat_efficiency)
+power_bat0 =u0*x0*energy_bat_max*battery_efficiency(u0)/TIME_STEP
 
 x = np.zeros(time_span)
 u = np.zeros(time_span)
@@ -200,70 +197,11 @@ for i in range(1, time_span):
     foo, x[i], P_diesel[i-1] = state_transition(i-1, x[i-1], u[i-1])
     a, _, _ = membership(x[i])
     u[i] = action_space[int(mu[a, i])]
-    power_bat[i] = u[i]*x[i]*energy_bat_max/(TIME_STEP*bat_efficiency)
+    power_bat[i] = u[i]*x[i]*energy_bat_max*battery_efficiency(u[i])/TIME_STEP
 
 i = time_span-1
 foo1, foo2, P_diesel[i] = state_transition(i, x[i], u[i])
 
-
-'''Method 2: Considering the overall structure of the solution
-             by penalizing the sharp change of output power in the 
-             info_mx 
-'''
-# def penalization(u, step = 10):
-#     penal_base = math.inf
-#     total = 0*action_space
-#     for i in range(1,min(step+1, len(u)+1)):
-#         u0 = u[-1*i]
-#         bias = abs(action_space-u0)
-#         bias[bias>=0.07]=penal_base
-#         bias[bias<0.07] = 0
-#         total += bias
-#     return total
-#
-# def reconstruct(x0):
-#     n_bat = 5
-#     energy_bat_max = 4.920 * n_bat
-#     bat_efficiency = 0.9
-#
-#     a, b, c = membership(x0)
-#     # u0 = action_space[int(mu[a, 0])]
-#     myaction = np.argmin(info_mx[str(0)][a,:])
-#     u0 = action_space[int(myaction)]
-#     power_bat0 = u0 * x0 * energy_bat_max / (TIME_STEP * bat_efficiency)
-#
-#     x = np.zeros(time_span)
-#     u = np.zeros(time_span)
-#     power_bat = np.zeros(time_span)
-#     P_diesel = np.zeros(time_span)
-#
-#     power_bat[0] = power_bat0
-#     x[0] = x0
-#     u[0] = u0
-#     penalization_step = 5
-#
-#     for i in range(1, time_span):
-#         _, x[i], P_diesel[i - 1] = state_transition(i - 1, x[i - 1], u[i - 1])
-#         a, b, c = membership(x[i])
-#         penalized_info = np.add(info_mx[str(i)][a, :], penalization(u[0:i]))
-#         myaction = np.argmin(penalized_info)
-#         u[i] = action_space[int(myaction)]
-#         power_bat[i] = u[i] * x[i] * energy_bat_max / (TIME_STEP * bat_efficiency)
-#
-#     i = time_span - 1
-#     _, _, P_diesel[i] = state_transition(i, x[i], u[i])
-#     return x, u, power_bat, P_diesel # x: path; u: action; power_bat: battery power output; P_diesel: power output of the diesel engine
-#
-#
-# x0 = 0.8
-# x, u, power_bat, P_diesel = reconstruct(x0)
-
-
-
-
-# -----------------------------------------------------------------------
-# |                      Calculate the cost                             |
-# -----------------------------------------------------------------------
 
 np.save('DP_diesel.npy', P_diesel)
 rules_based_control_diesel = np.load('C:/Users\lenovo\Documents\PycharmProjets\Easy21/rlmgem/utils/rules_diesel.npy')

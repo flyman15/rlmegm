@@ -8,10 +8,7 @@ import copy
 import math
 import matplotlib.pyplot as plt
 
-from rlmgem.env.CleanPowerGenerator import ElectricityGenerator
-from rlmgem.env.Battery import Battery
-from rlmgem.env.FuelCell import FuelCell
-from rlmgem.env.mgem_env import Environment
+from rlmgem.env.mgem_env import DefineEnv
 
 
 def battery_efficiency(output_power):
@@ -41,16 +38,12 @@ def PV_prod(env_profile, time_posi):
 
 load = np.load('C:/Users\lenovo\Documents\PycharmProjets\Easy21/rlmgem/data/load.npy')
 pv_prod_profile = np.load('C:/Users\lenovo\Documents\PycharmProjets\Easy21/rlmgem/data/PV_prod.npy')
-# load = [10*abs(math.sin(4*math.pi*x/144)) for x in range(0,144)]
+# # load = [10*abs(math.sin(4*math.pi*x/144)) for x in range(0,144)]
 time_span = len(load)
-
-
 TIME_STEP = 1/6
-myBattery = Battery(efficiency_function=battery_efficiency, dynamics_function=battery_dynamics,
-                    max_power=60, min_power=-60, initial_state=0.8)
-myFuelcell = FuelCell(consumption_function=fuelcell_consumption, max_power=37.5, min_power=0)
-myPV = ElectricityGenerator(prod_profile=pv_prod_profile, profile_type='radiation', prod_function=PV_prod)
-myEnv = Environment(load_profile=load, battery=myBattery, fuelcell=myFuelcell, WT=None, PV=myPV, time_step=TIME_STEP)
+
+myEnv = DefineEnv(0.8)
+
 
 plt.style.use('bmh')
 # fig1 = plt.figure(1)

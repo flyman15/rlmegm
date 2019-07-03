@@ -14,7 +14,7 @@ import pandas as pd
 # b). Electricity price of 2007~2013, recorded 24h*365d
 #     Peak period: 09-20
 #     Off-peak:    00-08, 21-24
-#    Base:         mean(Peak, Off-peak)
+#     Base:         mean(Peak, Off-peak)
 # '''
 #
 # '''2. PV production profile'''
@@ -59,17 +59,29 @@ import pandas as pd
 # pv_prod = np.array(pv_prod.iloc[1])
 # np.save('PV_prod.npy', pv_prod)
 # print(pv_prod)
-plt.style.use('bmh')
-load = np.load('load.npy')
-pv_prod = np.load('PV_prod.npy')
-plt.figure(1)
-plt.plot(load)
-plt.show()
+# plt.style.use('bmh')
+# load = np.load('load.npy')
+# pv_prod = np.load('PV_prod.npy')
+# plt.figure(1)
+# plt.plot(load)
+# plt.show()
+#
+# plt.figure(2)
+# plt.plot(pv_prod)
+# plt.show()
 
-plt.figure(2)
-plt.plot(pv_prod)
+theta1 = np.load('../figures/theta_20000_0.1.npy')
+theta2 = np.load('../figures/theta_20000_0.5.npy')
+plt.style.use('ggplot')
+plt.figure(figsize=(12,8))
+# plt.subplot(2,1,1)
+plt.plot(theta1, label='$\epsilon$=0.1')
+# plt.subplot(2,1,2)
+plt.plot(theta2, label='$\epsilon$=0.5')
+plt.title('episodes=20000')
+plt.legend()
+plt.savefig('../figures/episode_20000_epsilon_0.1_Vs_0.5.png', bbox_inches='tight',dpi=300)
 plt.show()
-
 
 
 
